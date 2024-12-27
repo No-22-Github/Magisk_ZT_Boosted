@@ -25,8 +25,8 @@ rm "$test_file"
 
 
 # 定义配置文件路径和日志文件路径
-CONFIG_FILE="/storage/emulated/0/Android/config.yaml"
-LOG_FILE="/storage/emulated/0/Android/config.yaml.log"
+CONFIG_FILE="/storage/emulated/0/Android/ZT_Boosted/config.yaml"
+LOG_FILE="/storage/emulated/0/Android/ZT_Boosted/config.yaml.log"
 # 定义 module_log 输出日志函数
 module_log() {
   echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1" >> $LOG_FILE
