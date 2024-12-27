@@ -1,7 +1,11 @@
 ui_print "#############################################"
 ui_print "您正在安装的是 ZT_Boosted 子腾系统通用优化模块"
 ui_print "模块版本：v1.0-dev"
-cat By_No22.txt
+ui_print "   ___         _  __       ___  ___ "
+ui_print "  / _ )__ __  / |/ /__    |_  ||_  |"
+ui_print " / _  / // / /    / _ \_ / __// __/ "
+ui_print "/____/\_, / /_/|_/\___(_)____/____/ "
+ui_print "     /___/                          "
 ui_print "#############################################"
 echo -e "系统版本：$(getprop ro.build.display.id)"
 ui_print "- 正在释放文件"
