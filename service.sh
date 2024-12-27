@@ -1,3 +1,5 @@
+# Magisk_ZT_Boosted v1.0
+# 基于 Magisk-All-In-One v1.3
 # 延迟执行 service.sh 脚本
 # All-In-One v1.0 的 sleep 1m 在某些设备上不太实际
 # 从 v1.2 版本开始采用监测文件方案判断是否开机
@@ -61,12 +63,8 @@ FOREGROUND=$(read_config "前台应用 " "0-7")
 SYSTEM_FOREGROUND=$(read_config "上层应用 " "0-7")
 
 # 其他选项
-# 王者荣耀游戏优化
-OPTIMIZE_WZRY=$(read_config "王者优化 " "0")
 # TCP 网络优化
 OPTIMIZE_TCP=$(read_config "TCP网络优化 " "1")
-# 移除小米更新验证
-OPTIMIZE_MIUI_OTA=$(read_config "移除小米更新验证 " "1")
 # 模块日志输出
 OPTIMIZE_MODULE=$(read_config "模块日志输出 " "0")
 
@@ -120,9 +118,9 @@ elif [ "$PERFORMANCE" == "2" ]; then
   # 限制系统后台应用
   SYSTEM_BACKGROUND=""
   # 限制用户前台应用
-  FOREGROUND="0-7"
+  FOREGROUND="0-3"
   # 限制用户悬浮窗应用
-  SYSTEM_FOREGROUND="6-7"
+  SYSTEM_FOREGROUND="2-3"
   # 大核 提高这个值有利于性能，不利于降低功耗。
   [ "$SCHED_DOWNMIGRATE" == "none" ] && SCHED_DOWNMIGRATE="30 30"
   # 小核 提高这个值有利于降低功耗，不利于性能。
@@ -215,10 +213,6 @@ if [ "$PERFORMANCE" != "3" ]; then
   # CPU 调度
   chmod 644 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
   echo $CPU_SCALING > /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
-  chmod 644 /sys/devices/system/cpu/cpu6/cpufreq/scaling_governor
-  echo $CPU_SCALING > /sys/devices/system/cpu/cpu6/cpufreq/scaling_governor
-  chmod 644 /sys/devices/system/cpu/cpu7/cpufreq/scaling_governor
-  echo $CPU_SCALING > /sys/devices/system/cpu/cpu7/cpufreq/scaling_governor
   # 将 CPU_SCALING 模式转换为大写字符串并输出
   CPU_SCALING_UPPERCASE=$(echo "$CPU_SCALING" | tr '[:lower:]' '[:upper:]')
   module_log "CPU 调度模式为 ${CPU_SCALING_UPPERCASE} 性能模式"
@@ -460,160 +454,6 @@ echo "30100000" > /sys/class/power_supply/battery/constant_charge_current_max
 echo "31000000" > /sys/class/qcom-battery/restricted_current
 echo "1" > /sys/class/power_supply/usb/boost_current
 module_log "已开启快充优化"
-
-# 王者荣耀游戏优化
-if [ "$OPTIMIZE_WZRY" == "1" ]; then
-  # 开启王者荣耀 O3T 优化
-  # 王者荣耀配置文件夹路径
-  module_log "正在开启王者荣耀 O3T 优化"
-  SHARED_PREFS="/data/data/com.tencent.tmgp.sgame/shared_prefs"
-  if [ ! -d "$SHARED_PREFS" ]; then
-    module_log "- 未找到王者荣耀配置文件夹"
-  else
-    # 王者荣耀配置文件
-    PLAYER_PREFS="$SHARED_PREFS/com.tencent.tmgp.sgame.v2.playerprefs.xml"
-    # OpenGLES3Config.xml 配置文件路径
-    CONFIG="$SHARED_PREFS/OpenGLES3Config.xml"
-    # 更新 OpenGLES3Config.xml 配置
-    echo "<?xml version='1.0'encoding='utf-8'standalone='yes'?>
-<map>
-    <int name=\"MemSizeForGPUSkin\"value=\"9999\"/>
-    <boolean name=\"EnableGPUSkin\"value=\"false\"/>
-    <boolean name=\"EnableGLES3\"value=\"false\"/>
-</map>" > $CONFIG
-    module_log "- 更新王者荣耀 OpenGLES3Config.xml 配置文件"
-    # 删除王者荣耀配置参数
-    sed -i '/.*<int name="VulkanTryCount" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableVulkan" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableGLES3" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableMTR" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="DisableMTR" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="sgame_ALL_HighFPS" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableHWVendorOpt" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="UnityGraphicsQuality" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableGPUReport" value=".*" \/>/'d "$PLAYER_PREFS"
-    # 更新王者荣耀 O3T 配置参数
-    sed -i '2a \ \ \ \ <int name="VulkanTryCount" value="1" \/>' "$PLAYER_PREFS"
-    sed -i '3a \ \ \ \ <int name="EnableVulkan" value="3" \/>' "$PLAYER_PREFS"
-    sed -i '4a \ \ \ \ <int name="EnableGLES3" value="2" \/>' "$PLAYER_PREFS"
-    sed -i '5a \ \ \ \ <int name="EnableMTR" value="1" \/>' "$PLAYER_PREFS"
-    sed -i '6a \ \ \ \ <int name="DisableMTR" value="3" \/>' "$PLAYER_PREFS"
-    sed -i '7a \ \ \ \ <int name="sgame_ALL_HighFPS" value="1" \/>' "$PLAYER_PREFS"
-    sed -i '8a \ \ \ \ <int name="EnableHWVendorOpt" value="1" \/>' "$PLAYER_PREFS"
-    sed -i '9a \ \ \ \ <int name="UnityGraphicsQuality" value="1" \/>' "$PLAYER_PREFS"
-    sed -i '10a \ \ \ \ <int name="EnableGPUReport" value="2" \/>' "$PLAYER_PREFS"
-    module_log "- 更新王者荣耀配置参数"
-    chmod 550 $SHARED_PREFS
-    chmod 440 $PLAYER_PREFS
-    module_log "- 更新配置文件权限"
-    module_log "- 已开启王者荣耀 O3T 优化"
-  fi
-elif [ "$OPTIMIZE_WZRY" == "2" ]; then
-  # 开启王者荣耀 O3T 优化
-  # 王者荣耀配置文件夹路径
-  module_log "正在开启王者荣耀 VT 优化"
-  SHARED_PREFS="/data/data/com.tencent.tmgp.sgame/shared_prefs"
-  if [ ! -d "$SHARED_PREFS" ]; then
-    module_log "- 未找到王者荣耀配置文件夹"
-  else
-    # 王者荣耀配置文件
-    PLAYER_PREFS="$SHARED_PREFS/com.tencent.tmgp.sgame.v2.playerprefs.xml"
-    # OpenGLES3Config.xml 配置文件路径
-    CONFIG="$SHARED_PREFS/OpenGLES3Config.xml"
-    # 更新 OpenGLES3Config.xml 配置
-    echo "<?xml version='1.0'encoding='utf-8'standalone='yes'?>
-<map>
-    <int name=\"MemSizeForGPUSkin\"value=\"9999\"/>
-    <boolean name=\"EnableGPUSkin\"value=\"false\"/>
-    <boolean name=\"EnableGLES3\"value=\"false\"/>
-</map>" > $CONFIG
-    module_log "- 更新王者荣耀 OpenGLES3Config.xml 配置文件"
-    # 删除王者荣耀配置参数
-    sed -i '/.*<int name="VulkanTryCount" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableVulkan" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableGLES3" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableMTR" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="DisableMTR" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="sgame_ALL_HighFPS" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableHWVendorOpt" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="UnityGraphicsQuality" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableGPUReport" value=".*" \/>/'d "$PLAYER_PREFS"
-    # 更新王者荣耀 VT 配置参数
-    sed -i '2a \ \ \ \ <int name="VulkanTryCount" value="1" \/>' "$PLAYER_PREFS"
-    sed -i '3a \ \ \ \ <int name="EnableVulkan" value="2" \/>' "$PLAYER_PREFS"
-    sed -i '4a \ \ \ \ <int name="EnableGLES3" value="3" \/>' "$PLAYER_PREFS"
-    sed -i '5a \ \ \ \ <int name="EnableMTR" value="1" \/>' "$PLAYER_PREFS"
-    sed -i '6a \ \ \ \ <int name="DisableMTR" value="3" \/>' "$PLAYER_PREFS"
-    sed -i '7a \ \ \ \ <int name="sgame_ALL_HighFPS" value="1" \/>' "$PLAYER_PREFS"
-    sed -i '8a \ \ \ \ <int name="EnableHWVendorOpt" value="1" \/>' "$PLAYER_PREFS"
-    sed -i '9a \ \ \ \ <int name="UnityGraphicsQuality" value="1" \/>' "$PLAYER_PREFS"
-    sed -i '10a \ \ \ \ <int name="EnableGPUReport" value="2" \/>' "$PLAYER_PREFS"
-    module_log "- 更新王者荣耀配置参数"
-    chmod 550 $SHARED_PREFS
-    chmod 440 $PLAYER_PREFS
-    module_log "- 更新配置文件权限"
-    module_log "- 已开启王者荣耀 VT 优化"
-  fi
-elif [ "$OPTIMIZE_WZRY" == "3" ]; then
-  # 删除更改后的配置, 使用默认配置参数
-  SHARED_PREFS="/data/data/com.tencent.tmgp.sgame/shared_prefs"
-  if [ -d "$SHARED_PREFS" ]; then
-    # 王者荣耀配置文件
-    PLAYER_PREFS="$SHARED_PREFS/com.tencent.tmgp.sgame.v2.playerprefs.xml"
-    O3T_PREFS="<int name=\"EnableVulkan\" value=\"3\" \/>"
-    VT_PREFS="<int name=\"EnableVulkan\" value=\"2\" \/>"
-    STATUS_PREFS="none"
-    # 判断匹配函数，匹配函数不为0，则包含给定字符
-    if [ `grep -c "$O3T_PREFS" $PLAYER_PREFS` -ne '0' ];then
-      STATUS_PREFS="O3T"
-    elif [ `grep -c "$VT_PREFS" $PLAYER_PREFS` -ne '0' ];then
-      STATUS_PREFS="VT"
-    fi
-    if [ $STATUS_PREFS != "none" ]; then
-      # 使用王者荣耀默认配置参数
-      sed -i '/.*<int name="VulkanTryCount" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="EnableVulkan" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="EnableGLES3" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="EnableMTR" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="DisableMTR" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="sgame_ALL_HighFPS" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="EnableHWVendorOpt" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="UnityGraphicsQuality" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="EnableGPUReport" value=".*" \/>/'d "$PLAYER_PREFS"
-      chmod 771 $SHARED_PREFS
-      chmod 660 $PLAYER_PREFS
-      module_log "已删除王者荣耀 $STATUS_PREFS 配置, 已更新 config.yaml"
-    fi
-    module_log "未找到更改的王者荣耀 O3T/VT 配置参数, 已恢复 config.yaml"
-  else
-    module_log "未找到王者荣耀配置文件夹, 已更新 config.yaml"
-  fi
-  sed -i '/^王者优化 /c\王者优化 0' $CONFIG_FILE
-fi
-
-# 移除小米更新验证
-# 获取用户配置, 判断配置是否为1
-# 移除小米更新验证
-if [ "$OPTIMIZE_MIUI_OTA" == "1" ]; then
-  # 查找 /*/etc/device_features 文件夹及其子文件夹下的所有 *.xml 文件
-  for dir in /*/etc/device_features; do
-    # 判断是否是文件夹
-    if [ -d "$dir" ]; then
-      # 操作文件夹下的文件
-      for file in "$dir"/*.xml; do
-        # 判断是否为 OTA 配置文件
-        if [ -f "$file" ] && grep -q 'support_ota_validate' "$file"; then
-          # 创建相关的文件夹
-          mkdir -p "${MODDIR}${dir}"
-          # 复制文件到目标目录
-          cp -f "$file" "${MODDIR}${dir}/"
-          # 修改 OTA 配置文件中的内容
-          sed -i 's/"support_ota_validate">true</"support_ota_validate">false</g' "${MODDIR}${dir}/$(basename "$file")"
-        fi
-      done
-    fi
-  done
-fi
 
 # TCP 优化
 if [ "$OPTIMIZE_TCP" == "1" ]; then
