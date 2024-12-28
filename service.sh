@@ -145,8 +145,8 @@ if [ "$PERFORMANCE" == "1" ]; then
   
   # CPU 调度
   chmod 644 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
-  echo "powersave" > /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
-  module_log "CPU 调度模式为 ${CPU_SCALING_UPPERCASE} 性能模式"
+  echo "sprdemand" > /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
+  module_log "CPU 调度模式为 SPRDEMAND 节电模式"
 fi
 
 
