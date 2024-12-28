@@ -9,7 +9,7 @@
 
 # 循环判断是否开机
 while [ "$(getprop sys.boot_completed)" != "1" ]; do
-    sleep 1
+    sleep 3 # 不急
 done
 # 创建用于文件权限测试的文件
 test_file="/sdcard/Android/.PERMISSION_TEST"
@@ -91,77 +91,21 @@ else
 fi
 
 # 输出日志
-module_log "开机完成，正在读取 config.yaml 配置.."
-
-# 判断是否为养老模式
-if [ "$PERFORMANCE" == "3" ]; then
-  module_log "当前模式: 养老模式（$PERFORMANCE）"
-  module_log "将禁用 CPU / GPU 调度"
-  # 如果用户自定义了 “其他选项”的“大小核”配置
-  # 则设置大小核为用户自定义的配置
-  if ! [ "$SCHED_DOWNMIGRATE" == "none" ]; then
-    echo $SCHED_DOWNMIGRATE > /proc/sys/kernel/sched_downmigrate
-    module_log "- CPU 大核分配（自定义配置）: $SCHED_DOWNMIGRATE"
-  fi
-  if ! [ "$SCHED_UPMIGRATE" == "none" ]; then
-    echo $SCHED_UPMIGRATE > /proc/sys/kernel/sched_upmigrate
-    module_log "- CPU 小核分配（自定义配置）: $SCHED_UPMIGRATE"
-  fi
-elif [ "$PERFORMANCE" == "2" ]; then
-  # 判断是否为超级省电模式
-  # 超级省电模式会限制性能释放
-  module_log "当前模式: 超级省电（$PERFORMANCE）"
-  # 设置 CPU 调度模式为 POWERSAVE
-  CPU_SCALING="powersave"
-  # 限制用户后台应用
-  BACKGROUND="0"
-  # 限制系统后台应用
-  SYSTEM_BACKGROUND=""
-  # 限制用户前台应用
-  FOREGROUND="0-3"
-  # 限制用户悬浮窗应用
-  SYSTEM_FOREGROUND="2-3"
-  # 大核 提高这个值有利于性能，不利于降低功耗。
-  [ "$SCHED_DOWNMIGRATE" == "none" ] && SCHED_DOWNMIGRATE="30 30"
-  # 小核 提高这个值有利于降低功耗，不利于性能。
-  [ "$SCHED_UPMIGRATE" == "none" ] && SCHED_UPMIGRATE="70 70"
-  module_log "已限制用户/系统应用后台运行"
-elif [ "$PERFORMANCE" == "1" ]; then
-  # 判断是否为省电优先
-  # 大核 提高这个值有利于性能，不利于降低功耗。
-  [ "$SCHED_DOWNMIGRATE" == "none" ] && SCHED_DOWNMIGRATE="30 30"
-  # 小核 提高这个值有利于降低功耗，不利于性能。
-  [ "$SCHED_UPMIGRATE" == "none" ] && SCHED_UPMIGRATE="70 70"
-  CPU_SCALING="ondemand"
-  module_log "当前模式: 省电优先（$PERFORMANCE）"
-else
-  # 判断是否为性能优先
-  PERFORMANCE="0"
-  # 启用所有离线的 CPU
-  for cpu in /sys/devices/system/cpu/cpu*/online; do
-    [ "$(cat "$cpu")" == 0 ] && echo 1 > "$cpu"
-  done
-  # 大核 提高这个值有利于性能，不利于降低功耗。
-  [ "$SCHED_DOWNMIGRATE" == "none" ] && SCHED_DOWNMIGRATE="40 40"
-  # 小核 提高这个值有利于降低功耗，不利于性能。
-  [ "$SCHED_UPMIGRATE" == "none" ] && SCHED_UPMIGRATE="60 60"
-  module_log "当前模式: 性能优先（$PERFORMANCE）"
-fi
+module_log "开机完成，正在读取 config.yaml 配置..."
 
 
 # 调节 CPU 激进度百分比%
 # 前台的应用（100%会把cpu拉满）
-# echo "10" > /dev/stune/foreground/schedtune.boost
+echo "10" > /dev/stune/foreground/schedtune.boost
 # 显示在上层的应用
-# echo "0" > /dev/stune/top-app/schedtune.boost
+echo "0" > /dev/stune/top-app/schedtune.boost
 # 用户的后台应用（减少cpu乱跳，省电）
-# echo "0" > /dev/stune/background/schedtune.boost
+echo "0" > /dev/stune/background/schedtune.boost
 
 
 
-# 核心分配优化
-# 如果不为养老模式
-if [ "$PERFORMANCE" != "3" ]; then
+  # 核心分配优化
+
   # 设置 CPU 应用分配
   # 用户后台应用
   echo $BACKGROUND > /dev/cpuset/background/cpus
@@ -191,33 +135,12 @@ if [ "$PERFORMANCE" != "3" ]; then
   echo "99000" > /sys/class/thermal/thermal_zone36/trip_point_0_temp
   module_log "- 核心分配优化已开启"
   module_log "- CPU/GPU 温控优化温控已开启"
-  # 读取负载均衡配置
-  SCHEDTUNE=$(read_config "负载均衡 " "0")
-  if [ "$SCHEDTUNE" == "1" ]; then
-    SCHEDTUNE=2
-    module_log "CPU 负载均衡模式: 软件均衡"
-  else
-    SCHEDTUNE=1
-    module_log "CPU 负载均衡模式: 核心均衡"
-  fi
-  # CPU 负载均衡，改1为核心均衡，2为软件均衡，可能只会有部分生效，是因为系统限制
-  echo $SCHEDTUNE > /dev/cpuset/sched_relax_domain_level
-  echo $SCHEDTUNE > /dev/cpuset/system-background/sched_relax_domain_level
-  echo $SCHEDTUNE > /dev/cpuset/background/sched_relax_domain_level
-  echo $SCHEDTUNE > /dev/cpuset/camera-background/sched_relax_domain_level
-  echo $SCHEDTUNE > /dev/cpuset/foreground/sched_relax_domain_level
-  echo $SCHEDTUNE > /dev/cpuset/top-app/sched_relax_domain_level
-  echo $SCHEDTUNE > /dev/cpuset/restricted/sched_relax_domain_level
-  echo $SCHEDTUNE > /dev/cpuset/asopt/sched_relax_domain_level
-  echo $SCHEDTUNE > /dev/cpuset/camera-daemon/sched_relax_domain_level
   # CPU 调度
   chmod 644 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
   echo $CPU_SCALING > /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
   # 将 CPU_SCALING 模式转换为大写字符串并输出
   CPU_SCALING_UPPERCASE=$(echo "$CPU_SCALING" | tr '[:lower:]' '[:upper:]')
   module_log "CPU 调度模式为 ${CPU_SCALING_UPPERCASE} 性能模式"
-fi
-
 
 
 # 启用 CPU 动态电压调节的功能
