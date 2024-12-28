@@ -56,10 +56,10 @@ read_config() {
 PERFORMANCE=$(read_config "性能调节 " "0")
 
 # 获取 CPU 应用分配
-BACKGROUND=$(read_config "用户后台应用 " "0-1")
-SYSTEM_BACKGROUND=$(read_config "系统后台应用 " "0-2")
-FOREGROUND=$(read_config "前台应用 " "0-7")
-SYSTEM_FOREGROUND=$(read_config "上层应用 " "0-7")
+BACKGROUND=$(read_config "用户后台应用 " "0")
+SYSTEM_BACKGROUND=$(read_config "系统后台应用 " "0")
+FOREGROUND=$(read_config "前台应用 " "0-3")
+SYSTEM_FOREGROUND=$(read_config "上层应用 " "0-3")
 
 # CPU 调度模式 SCALING
 CPU_SCALING="performance"
@@ -70,7 +70,7 @@ OPTIMIZE_TCP=$(read_config "TCP网络优化 " "1")
 # 模块日志输出
 OPTIMIZE_MODULE=$(read_config "模块日志输出 " "0")
 # 无线 ADB 调试
-WIRELESS_ADB=$(read_config "无线ADB调试" "0")
+WIRELESS_ADB=$(read_config "无线ADB调试 " "0")
 
 # 调整模块日志输出
 if [ "$OPTIMIZE_MODULE" == "0" ]; then
@@ -124,6 +124,30 @@ if [ "$PERFORMANCE" == "0" ]; then
   # 将 CPU_SCALING 模式转换为大写字符串并输出
   CPU_SCALING_UPPERCASE=$(echo "$CPU_SCALING" | tr '[:lower:]' '[:upper:]')
   module_log "CPU 调度模式为 ${CPU_SCALING_UPPERCASE} 性能模式"
+fi
+
+# 省电模式
+if [ "$PERFORMANCE" == "1" ]; then
+  # 设置 CPU 应用分配
+  echo "0" > /dev/cpuset/background/cpus
+  # 系统后台应用
+  echo "0" > /dev/cpuset/system-background/cpus
+  # 前台应用
+  echo "0-3" > /dev/cpuset/foreground/cpus
+  # 上层应用
+  echo "2-3" > /dev/cpuset/top-app/cpus
+  module_log "省电模式，启动！"
+  module_log "正在设置 CPU 应用分配"
+  module_log "- 用户的后台应用: 0"
+  module_log "- 系统的后台应用: 0"
+  module_log "- 前台应用: 0-3"
+  module_log "- 上层应用: 2-3"
+  
+  # CPU 调度
+  chmod 644 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
+  echo "powersave" > /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
+  module_log "CPU 调度模式为 ${CPU_SCALING_UPPERCASE} 性能模式"
+fi
 
 
 # 启用 CPU 动态电压调节的功能
