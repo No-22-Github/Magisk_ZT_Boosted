@@ -53,7 +53,6 @@ read_config() {
 # 获取性能模式
 # 0: 性能优先
 # 1: 省电优先
-# 2: 超级省电
 PERFORMANCE=$(read_config "性能调节 " "0")
 
 # 获取 CPU 应用分配
@@ -62,26 +61,18 @@ SYSTEM_BACKGROUND=$(read_config "系统后台应用 " "0-2")
 FOREGROUND=$(read_config "前台应用 " "0-7")
 SYSTEM_FOREGROUND=$(read_config "上层应用 " "0-7")
 
+# CPU 调度模式 SCALING
+CPU_SCALING="performance"
+
 # 其他选项
 # TCP 网络优化
 OPTIMIZE_TCP=$(read_config "TCP网络优化 " "1")
 # 模块日志输出
 OPTIMIZE_MODULE=$(read_config "模块日志输出 " "0")
-
-# 大核调度
-# 大核 提高这个值有利于性能，不利于降低功耗。
-SCHED_DOWNMIGRATE=$(read_config "大核调度 " "40 40")
-# 小核 提高这个值有利于降低功耗，不利于性能。
-SCHED_UPMIGRATE=$(read_config "小核调度 " "60 60")
-# 大核调度状态
-[ "$SCHED_DOWNMIGRATE" != "none" ] && SCHED_DOWN_STATUS="（自定义）" || SCHED_DOWN_STATUS="（预设）"
-# 小核调度状态
-[ "$SCHED_UPMIGRATE" != "none" ] && SCHED_UP_STATUS="（自定义）" || SCHED_UP_STATUS="（预设）"
-# CPU 调度模式 SCALING
-CPU_SCALING="performance"
+# 无线 ADB 调试
+WIRELESS_ADB=$(read_config "无线ADB调试" "0")
 
 # 调整模块日志输出
-# Ciallo～ (∠・ω< )⌒☆ Only
 if [ "$OPTIMIZE_MODULE" == "0" ]; then
   # 判断日志文件是否为已创建
   # 已创建则在文件末尾添加换行
@@ -96,16 +87,14 @@ module_log "开机完成，正在读取 config.yaml 配置..."
 
 # 调节 CPU 激进度百分比%
 # 前台的应用（100%会把cpu拉满）
-echo "10" > /dev/stune/foreground/schedtune.boost
+# echo "10" > /dev/stune/foreground/schedtune.boost
 # 显示在上层的应用
-echo "0" > /dev/stune/top-app/schedtune.boost
+# echo "0" > /dev/stune/top-app/schedtune.boost
 # 用户的后台应用（减少cpu乱跳，省电）
-echo "0" > /dev/stune/background/schedtune.boost
+# echo "0" > /dev/stune/background/schedtune.boost
 
 
-
-  # 核心分配优化
-
+if [ "$PERFORMANCE" == "0" ]; then
   # 设置 CPU 应用分配
   # 用户后台应用
   echo $BACKGROUND > /dev/cpuset/background/cpus
@@ -122,12 +111,6 @@ echo "0" > /dev/stune/background/schedtune.boost
   module_log "- 前台应用: $FOREGROUND"
   module_log "- 上层应用: $SYSTEM_FOREGROUND"
 
-  # 大核 提高这个值有利于性能，不利于降低功耗。
-  echo $SCHED_DOWNMIGRATE > /proc/sys/kernel/sched_downmigrate
-  # 小核 提高这个值有利于降低功耗，不利于性能。
-  echo $SCHED_UPMIGRATE > /proc/sys/kernel/sched_upmigrate
-  module_log "- CPU 大核分配${SCHED_DOWN_STATUS}: ${SCHED_DOWNMIGRATE}"
-  module_log "- CPU 小核分配${SCHED_UP_STATUS}: ${SCHED_UPMIGRATE}"
   # 较为轻的温控方案
   # GPU 温控 115度 极限120 到120会过热保护
   echo "115000" > /sys/class/thermal/thermal_zone32/trip_point_0_temp
